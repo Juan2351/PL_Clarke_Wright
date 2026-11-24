@@ -1,6 +1,10 @@
-"""Módulo que define la estructura de datos y validaciones de la red logística para el CVRP."""
+"""Módulo que define la estructura de datos, validaciones y persistencia JSON de la red logística para el CVRP."""
 
-from typing import Dict, List, Sequence
+from __future__ import annotations
+
+import json
+from pathlib import Path
+from typing import Any, Dict, List, Sequence
 
 
 class RedLogistica:
@@ -15,13 +19,15 @@ class RedLogistica:
         demandas (Dict[int, float]): Diccionario que mapea cada cliente i (1..n) a su demanda q_i.
         matriz_distancias (List[List[float]]): Matriz cuadrada y simétrica (n+1)x(n+1) de distancias d_ij.
         clientes (List[int]): Lista ordenada de identificadores de clientes [1, 2, ..., n].
+        nombre (str): Nombre descriptivo de la instancia de la red logística.
     """
 
     def __init__(
         self,
-        demandas: Dict[int, float] | Sequence[float],
+        demandas: Dict[int, float] | Dict[str, float] | Sequence[float],
         capacidad_vehiculo: float,
         matriz_distancias: Sequence[Sequence[float]],
+        nombre: str = "Red Logística CVRP",
     ) -> None:
         """Inicializa y valida la red logística.
 
@@ -30,6 +36,7 @@ class RedLogistica:
                 donde el índice corresponde a los clientes 1..n (o 0..n si incluye el depósito con demanda 0).
             capacidad_vehiculo: Capacidad máxima Q de cada vehículo (Q > 0).
             matriz_distancias: Matriz cuadrada (n+1)x(n+1) con las distancias entre todos los nodos (0..n).
+            nombre: Nombre opcional de la instancia.
 
         Raises:
             ValueError: Si la capacidad no es positiva, si la matriz no es cuadrada o simétrica,
@@ -42,6 +49,7 @@ class RedLogistica:
             )
 
         self.deposito: int = 0
+        self.nombre: str = nombre
         self.capacidad_vehiculo: float = float(capacidad_vehiculo)
         self.matriz_distancias: List[List[float]] = [
             [float(valor) for valor in fila] for fila in matriz_distancias
@@ -89,22 +97,25 @@ class RedLogistica:
 
     def _procesar_y_validar_demandas(
         self,
-        demandas: Dict[int, float] | Sequence[float],
+        demandas: Dict[int, float] | Dict[str, float] | Sequence[float],
         num_clientes: int,
     ) -> Dict[int, float]:
         """Normaliza y valida que las demandas de los clientes estén dentro del rango permitido (0 <= q_i <= Q)."""
         demandas_dict: Dict[int, float] = {}
 
         if isinstance(demandas, dict):
+            demandas_int: Dict[int, float] = {
+                int(k): float(v) for k, v in demandas.items()
+            }
             clientes_esperados = set(range(1, num_clientes + 1))
-            claves = set(demandas.keys()) - {0}
+            claves = set(demandas_int.keys()) - {0}
             if claves != clientes_esperados:
                 raise ValueError(
                     f"Las claves de demandas deben corresponder exactamente a los clientes 1..{num_clientes}. "
                     f"Recibido: {sorted(claves)}."
                 )
             for cliente_id in range(1, num_clientes + 1):
-                demandas_dict[cliente_id] = float(demandas[cliente_id])
+                demandas_dict[cliente_id] = float(demandas_int[cliente_id])
         else:
             if len(demandas) == num_clientes:
                 for idx, val in enumerate(demandas, start=1):
@@ -145,3 +156,42 @@ class RedLogistica:
         return sum(
             self.matriz_distancias[ruta[k]][ruta[k + 1]] for k in range(len(ruta) - 1)
         )
+
+    def a_diccionario(self) -> Dict[str, Any]:
+        """Serializa la red logística a un diccionario compatible con JSON."""
+        return {
+            "nombre": self.nombre,
+            "deposito": self.deposito,
+            "capacidad_vehiculo": self.capacidad_vehiculo,
+            "demandas": {str(k): v for k, v in self.demandas.items()},
+            "matriz_distancias": self.matriz_distancias,
+        }
+
+    @classmethod
+    def desde_diccionario(cls, datos: Dict[str, Any]) -> RedLogistica:
+        """Construye una instancia de RedLogistica a partir de un diccionario."""
+        if "capacidad_vehiculo" not in datos or "demandas" not in datos or "matriz_distancias" not in datos:
+            raise ValueError(
+                "El diccionario JSON debe contener las claves 'capacidad_vehiculo', 'demandas' y 'matriz_distancias'."
+            )
+        return cls(
+            demandas=datos["demandas"],
+            capacidad_vehiculo=float(datos["capacidad_vehiculo"]),
+            matriz_distancias=datos["matriz_distancias"],
+            nombre=str(datos.get("nombre", "Red Logística CVRP")),
+        )
+
+    @classmethod
+    def cargar_desde_json(cls, ruta_archivo: str | Path) -> RedLogistica:
+        """Carga una topología de red logística desde un archivo JSON."""
+        ruta = Path(ruta_archivo)
+        with ruta.open("r", encoding="utf-8") as archivo:
+            datos = json.load(archivo)
+        return cls.desde_diccionario(datos)
+
+    def guardar_en_json(self, ruta_archivo: str | Path) -> None:
+        """Exporta la red logística actual a un archivo JSON."""
+        ruta = Path(ruta_archivo)
+        ruta.parent.mkdir(parents=True, exist_ok=True)
+        with ruta.open("w", encoding="utf-8") as archivo:
+            json.dump(self.a_diccionario(), archivo, indent=2, ensure_ascii=False)

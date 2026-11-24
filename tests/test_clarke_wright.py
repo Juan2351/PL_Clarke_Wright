@@ -1,10 +1,18 @@
-"""Suite de pruebas unitarias para la red logística y el Algoritmo de Clarke & Wright."""
+"""Suite de pruebas unitarias para la red logística, el Algoritmo de Clarke & Wright y el visualizador PyVis."""
 
+from pathlib import Path
 from typing import Dict, List
 import pytest
 
 from src.clarke_wright import resolver_clarke_wright
 from src.red_logistica import RedLogistica
+from src.visualizador import (
+    COLOR_MAYOR_COSTO,
+    COLOR_MENOR_COSTO,
+    calcular_colores_por_costo_ruta,
+    construir_red_pyvis,
+    obtener_aristas_rutas_optimas,
+)
 
 
 @pytest.fixture
@@ -129,3 +137,50 @@ def test_rechazo_matriz_asimetrica_o_no_cuadrada(
             capacidad_vehiculo=10.0,
             matriz_distancias=matriz_no_cuadrada,
         )
+
+
+def test_carga_desde_json() -> None:
+    """Valida la carga dinámica desde data/caso_estudio_informe.json y convergencia a 66.0."""
+    ruta_json = (
+        Path(__file__).resolve().parent.parent / "data" / "caso_estudio_informe.json"
+    )
+    red = RedLogistica.cargar_desde_json(ruta_json)
+    resultado = resolver_clarke_wright(red)
+
+    assert red.capacidad_vehiculo == pytest.approx(10.0)
+    assert len(red.clientes) == 4
+    assert resultado.distancia_total == pytest.approx(66.0)
+    assert resultado.ahorro_total == pytest.approx(24.0)
+
+
+def test_visualizador_resalta_aristas_rutas_optimas(
+    datos_caso_estudio: Dict[str, object],
+) -> None:
+    """Verifica la identificación y coloreado de los tramos óptimos en PyVis."""
+    red = RedLogistica(
+        demandas=datos_caso_estudio["demandas"],  # type: ignore[arg-type]
+        capacidad_vehiculo=datos_caso_estudio["capacidad"],  # type: ignore[arg-type]
+        matriz_distancias=datos_caso_estudio["distancias"],  # type: ignore[arg-type]
+    )
+    resultado = resolver_clarke_wright(red)
+
+    aristas_activas = obtener_aristas_rutas_optimas(resultado.rutas_finales)
+    # Rutas: [0, 2, 3, 0] -> (0,2), (2,3), (0,3) y [0, 1, 4, 0] -> (0,1), (1,4), (0,4)
+    assert set(aristas_activas.keys()) == {
+        (0, 2),
+        (2, 3),
+        (0, 3),
+        (0, 1),
+        (1, 4),
+        (0, 4),
+    }
+
+    net = construir_red_pyvis(red, resultado, mostrar_aristas_inactivas=False)
+    assert len(net.nodes) == 5
+    assert len(net.edges) == 6
+
+    # Ruta 1 ([0, 2, 3, 0]) cuesta 36.0 (mayor costo -> rojo)
+    # Ruta 2 ([0, 1, 4, 0]) cuesta 30.0 (menor costo -> verde)
+    colores_ruta, _ = calcular_colores_por_costo_ruta(red, resultado.rutas_finales)
+    assert colores_ruta[1] == COLOR_MAYOR_COSTO
+    assert colores_ruta[2] == COLOR_MENOR_COSTO

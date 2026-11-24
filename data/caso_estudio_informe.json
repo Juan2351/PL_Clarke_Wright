@@ -1,0 +1,19 @@
+{
+  "nombre": "Caso de Estudio Analítico (Informe - 4 Clientes)",
+  "descripcion": "Red logística simétrica con 1 depósito central (nodo 0), 4 clientes (nodos 1..4) y capacidad homogénea Q = 10.0.",
+  "deposito": 0,
+  "capacidad_vehiculo": 10.0,
+  "demandas": {
+    "1": 4.0,
+    "2": 3.0,
+    "3": 5.0,
+    "4": 3.0
+  },
+  "matriz_distancias": [
+    [0.0, 10.0, 12.0, 15.0, 8.0],
+    [10.0, 0.0, 6.0, 14.0, 12.0],
+    [12.0, 6.0, 0.0, 9.0, 15.0],
+    [15.0, 14.0, 9.0, 0.0, 10.0],
+    [8.0, 12.0, 15.0, 10.0, 0.0]
+  ]
+}

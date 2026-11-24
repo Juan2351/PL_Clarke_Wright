@@ -1,0 +1,23 @@
+{
+  "nombre": "Red de Distribución Regional (6 Clientes)",
+  "descripcion": "Escenario de distribución urbana con 1 centro de distribución (nodo 0), 6 clientes comerciales y flota con capacidad Q = 15.0.",
+  "deposito": 0,
+  "capacidad_vehiculo": 15.0,
+  "demandas": {
+    "1": 5.0,
+    "2": 4.0,
+    "3": 6.0,
+    "4": 4.0,
+    "5": 7.0,
+    "6": 3.0
+  },
+  "matriz_distancias": [
+    [0.0, 12.0, 14.0, 18.0, 10.0, 16.0, 11.0],
+    [12.0, 0.0, 7.0, 15.0, 18.0, 22.0, 14.0],
+    [14.0, 7.0, 0.0, 8.0, 20.0, 19.0, 17.0],
+    [18.0, 15.0, 8.0, 0.0, 16.0, 10.0, 21.0],
+    [10.0, 18.0, 20.0, 16.0, 0.0, 9.0, 6.0],
+    [16.0, 22.0, 19.0, 10.0, 9.0, 0.0, 12.0],
+    [11.0, 14.0, 17.0, 21.0, 6.0, 12.0, 0.0]
+  ]
+}

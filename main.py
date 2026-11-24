@@ -1,11 +1,22 @@
-"""Script principal que ejecuta el caso de estudio analítico del Algoritmo de Clarke & Wright (CVRP)."""
+"""Script principal de validación en consola y lanzador de la interfaz gráfica para Clarke & Wright (CVRP)."""
+
+from pathlib import Path
+import subprocess
+import sys
 
 from src.clarke_wright import resolver_clarke_wright
 from src.red_logistica import RedLogistica
 
+RUTA_CASO_ESTUDIO = (
+    Path(__file__).resolve().parent / "data" / "caso_estudio_informe.json"
+)
+
 
 def construir_caso_estudio() -> RedLogistica:
-    """Construye la instancia del caso de estudio analítico con 1 depósito y 4 clientes."""
+    """Construye la instancia del caso de estudio analítico (desde JSON o en memoria como respaldo)."""
+    if RUTA_CASO_ESTUDIO.exists():
+        return RedLogistica.cargar_desde_json(RUTA_CASO_ESTUDIO)
+
     demandas = {
         1: 4.0,
         2: 3.0,
@@ -27,8 +38,18 @@ def construir_caso_estudio() -> RedLogistica:
     )
 
 
+def lanzar_interfaz_web() -> None:
+    """Lanza el dashboard interactivo en Streamlit (app.py)."""
+    ruta_app = Path(__file__).resolve().parent / "app.py"
+    subprocess.run([sys.executable, "-m", "streamlit", "run", str(ruta_app)], check=True)
+
+
 def main() -> None:
-    """Punto de entrada principal para resolver e imprimir el caso de estudio en consola."""
+    """Punto de entrada principal: ejecuta validación en consola o abre la UI si se pasa --ui."""
+    if "--ui" in sys.argv:
+        lanzar_interfaz_web()
+        return
+
     red = construir_caso_estudio()
     resultado = resolver_clarke_wright(red)
 
